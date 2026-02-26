@@ -95,7 +95,7 @@ int sys_mmap(void* start, unsigned long long len, int port, int flag, int fd) {
 	return 0;
 }
 int sys_munmap(void* start, unsigned long long len) {
-	uint64 va0 = (uint64) start;
+	uint64 va0 = (uint64) start; // Sets the first virtual address to the start pointer
 
 	if (len == 0) return 0;
 
