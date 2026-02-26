@@ -70,6 +70,9 @@ int run_all_app()
 		/*
 		* LAB1: you may need to initialize your new fields of proc here
 		*/
+		p->info.status = Ready;
+		memset(p->proc_syscall_times, 0, sizeof(p->proc_syscall_times));
+		memset(p->info.ti_syscall_times, 0, sizeof(p->info.ti_syscall_times));
 	}
 	return 0;
 }
