@@ -89,6 +89,9 @@ found:
 	memset((void *)p->trapframe, 0, TRAP_PAGE_SIZE);
 	p->context.ra = (uint64)usertrapret;
 	p->context.sp = p->kstack + KSTACK_SIZE;
+	p->stride = 0;
+	p->priority = 16;
+	p->pass = BIG_STRIDE / p->priority;
 	return p;
 }
 
@@ -99,29 +102,27 @@ found:
 //    via swtch back to the scheduler.
 void scheduler()
 {
-	struct proc *p;
 	for (;;) {
-		/*int has_proc = 0;
-		for (p = pool; p < &pool[NPROC]; p++) {
-			if (p->state == RUNNABLE) {
-				has_proc = 1;
-				tracef("swtich to proc %d", p - pool);
-				p->state = RUNNING;
-				current_proc = p;
-				swtch(&idle.context, &p->context);
+		struct proc *min_stride = NULL;
+		for (struct proc *p = pool; p < &pool[NPROC]; p++) {
+			if (p->state != RUNNABLE) continue;
+
+			if (min_stride == NULL ||
+				p->stride < min_stride->stride ||
+				(p->stride == min_stride->stride && p->pid < min_stride->pid)) {
+				
+				min_stride = p;
 			}
+
+			if (min_stride == NULL) {
+				panic("all app are over!\n");	
+			}
+			min_stride->stride += min_stride->pass;
+
+			min_stride->state = RUNNING;
+			current_proc = min_stride;
+			swtch(&idle.context, &min_stride->context);
 		}
-		if(has_proc == 0) {
-			panic("all app are over!\n");
-		}*/
-		p = fetch_task();
-		if (p == NULL) {
-			panic("all app are over!\n");
-		}
-		tracef("swtich to proc %d", p - pool);
-		p->state = RUNNING;
-		current_proc = p;
-		swtch(&idle.context, &p->context);
 	}
 }
 
@@ -144,7 +145,6 @@ void sched()
 void yield()
 {
 	current_proc->state = RUNNABLE;
-	add_task(current_proc);
 	sched();
 }
 
@@ -184,7 +184,6 @@ int fork()
 	np->trapframe->a0 = 0;
 	np->parent = p;
 	np->state = RUNNABLE;
-	add_task(np);
 	return np->pid;
 }
 
@@ -226,7 +225,6 @@ int wait(int pid, int *code)
 			return -1;
 		}
 		p->state = RUNNABLE;
-		add_task(p);
 		sched();
 	}
 }
