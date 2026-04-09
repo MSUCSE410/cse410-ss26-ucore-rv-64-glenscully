@@ -3,6 +3,7 @@
 #include "fcntl.h"
 #include "fs.h"
 #include "proc.h"
+#include "stat.h"
 
 //This is a system-level open file table that holds open files of all process.
 struct file filepool[FILEPOOLSIZE];
@@ -85,6 +86,7 @@ static struct inode *create(char *path, short type)
 	tracef("create dinode and inode type = %d\n", type);
 
 	ivalid(ip);
+	ip->nlink = 1;
 	iupdate(ip);
 	if (dirlink(dp, path, ip->inum) < 0)
 		panic("create: dirlink");
@@ -153,4 +155,40 @@ uint64 inoderead(struct file *f, uint64 va, uint64 len)
 	if ((r = readi(f->ip, 1, va, f->off, len)) > 0)
 		f->off += r;
 	return r;
+}
+
+int filestat(struct file *f, uint64 uaddr) {
+	struct Stat stat;
+
+	if (f == 0) {
+		return -1;
+	}
+
+	if (f->type != FD_INODE) {
+		return -1;
+	}
+
+	ivalid(f->ip);
+
+	stat.dev = 0;
+	stat.ino = f->ip->inum;
+	stat.nlink = f->ip->nlink;
+
+	if (f->ip->type == T_DIR) {
+		stat.mode = DIR;
+	}
+	else if (f->ip->type == T_FILE) {
+		stat.mode = FILE;
+	}
+	else {
+		return -1;
+	}
+
+	memset(stat.pad, 0, sizeof(stat.pad));
+
+	if (copyout(curr_proc()->pagetable, uaddr, (char *)&stat, sizeof(stat))) {
+		return -1;
+	}
+
+	return 0;
 }

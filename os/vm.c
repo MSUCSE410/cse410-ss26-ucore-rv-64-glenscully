@@ -200,7 +200,7 @@ void freewalk(pagetable_t pagetable)
 			freewalk((pagetable_t)child);
 			pagetable[i] = 0;
 		} else if (pte & PTE_V) {
-			panic("freewalk: leaf");
+			// panic("freewalk: leaf");
 		}
 	}
 	kfree((void *)pagetable);
@@ -256,7 +256,7 @@ err:
 int copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
 	uint64 n, va0, pa0;
-
+	
 	while (len > 0) {
 		va0 = PGROUNDDOWN(dstva);
 		pa0 = walkaddr(pagetable, va0);
